@@ -1,0 +1,9 @@
+body {
+  color: #130080;
+  margin: 0px;
+}
+
+.react-cm-flex {
+  display: flex;
+  flex: 1;
+}
