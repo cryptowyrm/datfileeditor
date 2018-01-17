@@ -52,6 +52,21 @@
 
 ;; Utility methods
 
+(defn file-tree [files-list]
+  (let [directories (filter #(.isDirectory (% "stat")) files-list)
+        files (filter #(not (.isDirectory (% "stat"))) files-list)]
+    (concat
+      (map
+        (fn [directory]
+          (assoc directory
+                 "contents"
+                 (filter
+                  (fn [file]
+                    (.startsWith (file "name") (str (directory "name") "/")))
+                  files)))
+        directories)
+      (filter #(not (clojure.string/includes? (% "name") "/")) files))))
+
 (def colors
   (js->clj jscolors :keywordize-keys true))
 
@@ -70,6 +85,26 @@
 
 (def theme (get-theme/default #js {}))
 
+(defn list-item-file [file]
+  [:> list-item/default
+    {:primary-text (file "name")
+     :secondary-text
+      (format-bytes (aget (file "stat") "size"))
+     :nested-items (if (empty? (file "contents"))
+                     #js[]
+                     (clj->js
+                       (for [file (file "contents")]
+                         (r/as-element
+                           [list-item-file file]))))
+     :primary-toggles-nested-list (when-not (empty? (file "contents")) true)
+     :on-click
+      (fn [e]
+        (when-not (.isDirectory (file "stat"))
+          (swap! app-state assoc :selected-file file)
+          (swap! app-state assoc :selected-file-edited nil)
+          (-> (.readFile (:archive @app-state) (file "name"))
+              (.then #(swap! app-state assoc :selected-file-content %)))))}])
+
 (defn files-list []
   (let [files (r/cursor app-state [:files])]
     (fn []
@@ -82,18 +117,9 @@
         [:> paper/default
           {:z-depth 1}
           [:> list/default
-            (for [file @files]
+            (for [file (file-tree @files)]
               ^{:key (file "name")}
-              [:> list-item/default
-                {:primary-text (file "name")
-                 :secondary-text
-                  (format-bytes (aget (file "stat") "size"))
-                 :on-click
-                    (fn [e]
-                      (swap! app-state assoc :selected-file file)
-                      (swap! app-state assoc :selected-file-edited nil)
-                      (-> (.readFile (:archive @app-state) (file "name"))
-                          (.then #(swap! app-state assoc :selected-file-content %))))}])]]])))
+              [list-item-file file])]]])))
 
 (defn editor []
   (let [selected-file (r/cursor app-state [:selected-file])
