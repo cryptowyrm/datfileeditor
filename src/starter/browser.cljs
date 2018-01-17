@@ -89,7 +89,9 @@
   [:> list-item/default
     {:primary-text (file "name")
      :secondary-text
-      (format-bytes (aget (file "stat") "size"))
+      (if (.isDirectory (file "stat"))
+        (str (count (file "contents")) " files")
+        (format-bytes (aget (file "stat") "size")))
      :nested-items (if (empty? (file "contents"))
                      #js[]
                      (clj->js
