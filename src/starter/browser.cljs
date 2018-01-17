@@ -2,11 +2,17 @@
   (:require
     [reagent.core :as r]
 
+    ;; CodeMirror
     ["react-codemirror2" :as code-mirror]
     ["codemirror/mode/javascript/javascript"]
     ["codemirror/mode/markdown/markdown"]
 
+    ;; Material UI styles
     ["material-ui/styles/colors" :as jscolors]
+    ["material-ui/styles/getMuiTheme" :as get-theme]
+    ["material-ui/styles/MuiThemeProvider" :as theme-provider]
+
+    ;; Material UI components
     ["material-ui/List/List" :as list]
     ["material-ui/List/ListItem" :as list-item]
     ["material-ui/AppBar" :as appbar]
@@ -16,9 +22,7 @@
     ["material-ui/Toolbar/Toolbar" :as toolbar]
     ["material-ui/Toolbar/ToolbarGroup" :as toolbar-group]
     ["material-ui/Toolbar/ToolbarSeparator" :as toolbar-separator]
-    ["material-ui/Toolbar/ToolbarTitle" :as toolbar-title]
-    ["material-ui/styles/getMuiTheme" :as get-theme]
-    ["material-ui/styles/MuiThemeProvider" :as theme-provider]))
+    ["material-ui/Toolbar/ToolbarTitle" :as toolbar-title]))
 
 ;; App state
 
