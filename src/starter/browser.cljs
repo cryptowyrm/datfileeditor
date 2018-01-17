@@ -14,6 +14,7 @@
 
     ;; Material UI icons
     ["material-ui/svg-icons/file/folder" :as icon-folder]
+    ["material-ui/svg-icons/file/folder-open" :as icon-folder-open]
     ["material-ui/svg-icons/editor/insert-drive-file" :as icon-file]
 
     ;; Material UI components
@@ -90,30 +91,36 @@
 (def theme (get-theme/default #js {}))
 
 (defn list-item-file [file]
-  [:> list-item/default
-    {:primary-text (file "name")
-     :left-icon
-      (if (.isDirectory (file "stat"))
-        (r/as-element [:> icon-folder/default])
-        (r/as-element [:> icon-file/default]))
-     :secondary-text
-      (if (.isDirectory (file "stat"))
-        (str (count (file "contents")) " files")
-        (format-bytes (aget (file "stat") "size")))
-     :nested-items (if (empty? (file "contents"))
-                     #js[]
-                     (clj->js
-                       (for [file (file "contents")]
-                         (r/as-element
-                           [list-item-file file]))))
-     :primary-toggles-nested-list (when-not (empty? (file "contents")) true)
-     :on-click
-      (fn [e]
-        (when-not (.isDirectory (file "stat"))
-          (swap! app-state assoc :selected-file file)
-          (swap! app-state assoc :selected-file-edited nil)
-          (-> (.readFile (:archive @app-state) (file "name"))
-              (.then #(swap! app-state assoc :selected-file-content %)))))}])
+  (let [expanded (r/atom false)]
+    (fn [file]
+      [:> list-item/default
+        {:primary-text (file "name")
+         :left-icon
+          (if (.isDirectory (file "stat"))
+            (if @expanded
+              (r/as-element [:> icon-folder-open/default])
+              (r/as-element [:> icon-folder/default]))
+            (r/as-element [:> icon-file/default]))
+         :secondary-text
+          (if (.isDirectory (file "stat"))
+            (str (count (file "contents")) " files")
+            (format-bytes (aget (file "stat") "size")))
+         :nested-items (if (empty? (file "contents"))
+                         #js[]
+                         (clj->js
+                           (for [file (file "contents")]
+                             (r/as-element
+                               [list-item-file file]))))
+         :primary-toggles-nested-list (when-not (empty? (file "contents")) true)
+         :on-nested-list-toggle (fn [list]
+                                  (swap! expanded not))
+         :on-click
+          (fn [e]
+            (when-not (.isDirectory (file "stat"))
+              (swap! app-state assoc :selected-file file)
+              (swap! app-state assoc :selected-file-edited nil)
+              (-> (.readFile (:archive @app-state) (file "name"))
+                  (.then #(swap! app-state assoc :selected-file-content %)))))}])))
 
 (defn files-list []
   (let [files (r/cursor app-state [:files])]
