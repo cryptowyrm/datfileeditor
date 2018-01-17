@@ -12,6 +12,10 @@
     ["material-ui/styles/getMuiTheme" :as get-theme]
     ["material-ui/styles/MuiThemeProvider" :as theme-provider]
 
+    ;; Material UI icons
+    ["material-ui/svg-icons/file/folder" :as icon-folder]
+    ["material-ui/svg-icons/editor/insert-drive-file" :as icon-file]
+
     ;; Material UI components
     ["material-ui/List/List" :as list]
     ["material-ui/List/ListItem" :as list-item]
@@ -88,6 +92,10 @@
 (defn list-item-file [file]
   [:> list-item/default
     {:primary-text (file "name")
+     :left-icon
+      (if (.isDirectory (file "stat"))
+        (r/as-element [:> icon-folder/default])
+        (r/as-element [:> icon-file/default]))
      :secondary-text
       (if (.isDirectory (file "stat"))
         (str (count (file "contents")) " files")
