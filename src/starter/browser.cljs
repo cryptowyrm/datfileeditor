@@ -111,6 +111,7 @@
                            (for [file (file "contents")]
                              (r/as-element
                                [list-item-file file]))))
+         :nested-list-style {:margin-left 10}
          :primary-toggles-nested-list (when-not (empty? (file "contents")) true)
          :on-nested-list-toggle (fn [list]
                                   (swap! expanded not))
