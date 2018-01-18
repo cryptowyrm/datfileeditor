@@ -38,6 +38,14 @@
 
 ;; Beaker API methods
 
+(defn archive-changed
+  "Takes a Dat archive and a callback f which is called with a single boolean
+  parameter that is true if the archive has changed files, or false."
+  [archive f]
+  (-> (.diff archive)
+      (.then (fn [result]
+               (f (not (empty? (js->clj result))))))))
+
 (defn readdir
   "Takes a dat archive and a path to a directory and calls f with
   a vector of the files in that directory."
@@ -50,6 +58,9 @@
     (.then
      (fn [archive]
        (swap! app-state assoc :archive archive)
+       (archive-changed archive
+        (fn [changed]
+          (swap! app-state assoc :changed changed)))
        (.readdir archive "/" #js{:stat true
                                  :recursive (boolean recursive?)})))
     (.then #(f (js->clj %)))))
@@ -182,6 +193,7 @@
 (defn app-toolbar []
   (let [wrap-lines (r/cursor app-state [:wrap-lines])
         archive (r/cursor app-state [:archive])
+        changed (r/cursor app-state [:changed])
         selected-file (r/cursor app-state [:selected-file])
         selected-file-content (r/cursor app-state [:selected-file-content])
         selected-file-edited (r/cursor app-state [:selected-file-edited])]
@@ -209,10 +221,14 @@
                          (reset! selected-file-content @selected-file-edited)
                          (reset! selected-file-edited nil)
                          (-> (.writeFile @archive (@selected-file "name") @selected-file-content)
-                             (.then #(js/console.log "Wrote " (@selected-file "name")))))}
+                             (.then #(reset! changed true))))}
             "Save"]
           [:> button/default
-            {:background-color (:blue500 colors)}
+            {:background-color (:blue500 colors)
+             :on-click (fn []
+                         (reset! changed false)
+                         (.commit @archive))
+             :disabled (not @changed)}
             "Publish"]
           [:div
            [:> toggle/default
