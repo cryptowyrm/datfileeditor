@@ -57,12 +57,18 @@
   (-> (js/DatArchive.selectArchive)
     (.then
      (fn [archive]
+       (js/console.log archive)
        (swap! app-state assoc :archive archive)
        (archive-changed archive
         (fn [changed]
           (swap! app-state assoc :changed changed)))
-       (.readdir archive "/" #js{:stat true
-                                 :recursive (boolean recursive?)})))
+       (.getInfo archive)))
+    (.then
+     (fn [info]
+       (swap! app-state assoc :owner (aget info "isOwner"))
+       (js/console.log (:owner @app-state))
+       (.readdir (:archive @app-state) "/" #js{:stat true
+                                               :recursive (boolean recursive?)})))
     (.then #(f (js->clj %)))))
 
 ;; Utility methods
@@ -194,6 +200,7 @@
   (let [wrap-lines (r/cursor app-state [:wrap-lines])
         archive (r/cursor app-state [:archive])
         changed (r/cursor app-state [:changed])
+        owner (r/cursor app-state [:owner])
         selected-file (r/cursor app-state [:selected-file])
         selected-file-content (r/cursor app-state [:selected-file-content])
         selected-file-edited (r/cursor app-state [:selected-file-edited])]
@@ -212,11 +219,15 @@
                            :recursive? true))
              :background-color (:grey400 colors)
              :style {:min-width 160}}
-            "Open Dat archive"]]
+            "Open Dat archive"]
+          (if-not @owner
+            [:> toolbar-title/default {:text "read-only"}])]
          [:> toolbar-group/default
           [:> button/default
             {:background-color (:blue500 colors)
-             :disabled (not @selected-file-edited)
+             :disabled (or
+                         (not @owner)
+                         (not @selected-file-edited))
              :on-click (fn []
                          (reset! selected-file-content @selected-file-edited)
                          (reset! selected-file-edited nil)
@@ -228,7 +239,9 @@
              :on-click (fn []
                          (reset! changed false)
                          (.commit @archive))
-             :disabled (not @changed)}
+             :disabled (or
+                        (not @owner)
+                        (not @changed))}
             "Publish"]
           [:div
            [:> toggle/default
