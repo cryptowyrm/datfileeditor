@@ -183,6 +183,7 @@
   (let [wrap-lines (r/cursor app-state [:wrap-lines])
         archive (r/cursor app-state [:archive])
         selected-file (r/cursor app-state [:selected-file])
+        selected-file-content (r/cursor app-state [:selected-file-content])
         selected-file-edited (r/cursor app-state [:selected-file-edited])]
     (fn []
       [:> paper/default
@@ -205,8 +206,9 @@
             {:background-color (:blue500 colors)
              :disabled (not @selected-file-edited)
              :on-click (fn []
-                         (js/console.log @selected-file-edited)
-                         (-> (.writeFile @archive (@selected-file "name") @selected-file-edited)
+                         (reset! selected-file-content @selected-file-edited)
+                         (reset! selected-file-edited nil)
+                         (-> (.writeFile @archive (@selected-file "name") @selected-file-content)
                              (.then #(js/console.log "Wrote " (@selected-file "name")))))}
             "Save"]
           [:> button/default
