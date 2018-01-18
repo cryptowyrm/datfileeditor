@@ -39,12 +39,11 @@
 ;; Beaker API methods
 
 (defn readdir
-  "Takes a Dat url and a path to a directory and calls f with
+  "Takes a dat archive and a path to a directory and calls f with
   a vector of the files in that directory."
-  [url path f]
-  (let [archive (js/DatArchive. url)]
-    (-> (.readdir archive path #js{:stat true})
-      (.then #(f (js->clj %))))))
+  [archive path f]
+  (-> (.readdir archive path #js{:stat true})
+    (.then #(f (js->clj %)))))
 
 (defn select-archive [f & {:keys [recursive?]}]
   (-> (js/DatArchive.selectArchive)
@@ -76,10 +75,12 @@
   (js->clj jscolors :keywordize-keys true))
 
 (defn browse-daturl [daturl]
-  (readdir daturl "/"
-    (fn [files]
-      (js/console.log (clj->js files))
-      (swap! app-state assoc :files files))))
+  (let [archive (js/DatArchive. daturl)]
+    (readdir archive "/"
+      (fn [files]
+        (js/console.log (clj->js files))
+        (swap! app-state assoc :archive archive)
+        (swap! app-state assoc :files files)))))
 
 (defn format-bytes [bytes]
   (cond (< bytes 1024) (str bytes " bytes")
