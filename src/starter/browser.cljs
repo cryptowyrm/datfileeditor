@@ -34,6 +34,8 @@
     ["material-ui/Toolbar/ToolbarSeparator" :as toolbar-separator]
     ["material-ui/Toolbar/ToolbarTitle" :as toolbar-title]))
 
+(set! *warn-on-infer* true)
+
 ;; App state
 
 (defonce app-state (r/atom {:files []
@@ -60,7 +62,7 @@
 (defn archive-changed
   "Takes a Dat archive and a callback f which is called with a single boolean
   parameter that is true if the archive has changed files, or false."
-  [archive f]
+  [^js archive f]
   (-> (.diff archive)
       (.then (fn [result]
                (f (not (empty? (js->clj result))))))))
@@ -68,14 +70,15 @@
 (defn readdir
   "Takes a dat archive and a path to a directory and calls f with
   a vector of the files in that directory."
-  [archive path f]
-  (-> (.readdir archive path #js{:stat true})
+  [^js archive path f]
+  (-> (.readdir archive path #js{:stat true
+                                 :recursive true})
     (.then #(f (js->clj %)))))
 
 (defn select-archive [f & {:keys [recursive?]}]
   (-> (js/DatArchive.selectArchive)
     (.then
-     (fn [archive]
+     (fn [^js archive]
        (js/console.log archive)
        (swap! app-state assoc :archive archive
                               :selected-file nil
@@ -91,8 +94,8 @@
      (fn [info]
        (swap! app-state assoc :owner (aget info "isOwner"))
        (js/console.log (:owner @app-state))
-       (.readdir (:archive @app-state) "/" #js{:stat true
-                                               :recursive (boolean recursive?)}))
+       (.readdir ^js (:archive @app-state) "/" #js{:stat true
+                                                   :recursive (boolean recursive?)}))
      (fn [e]
        (js/console.log "select-archive error: " e)))
     (.then
@@ -126,6 +129,7 @@
 
 (defn browse-daturl [daturl]
   (let [archive (js/DatArchive. daturl)]
+    (js/console.log "archive loaded" archive)
     (readdir archive "/"
       (fn [files]
         (js/console.log (clj->js files))
@@ -178,7 +182,7 @@
                   (js/console.log (str (file "name") " - " index " - " file-ending " - " mode))
                   (when mode
                     (swap! app-state assoc :mode mode))))
-              (-> (.readFile (:archive @app-state) (file "name"))
+              (-> (.readFile ^js (:archive @app-state) (file "name"))
                   (.then #(swap! app-state assoc :selected-file-content %)))))}])))
 
 (defn files-list []
@@ -279,14 +283,14 @@
              :on-click (fn []
                          (reset! selected-file-content @selected-file-edited)
                          (reset! selected-file-edited nil)
-                         (-> (.writeFile @archive (@selected-file "name") @selected-file-content)
+                         (-> (.writeFile ^js @archive (@selected-file "name") @selected-file-content)
                              (.then #(reset! changed true))))}
             "Save"]
           [:> button/default
             {:background-color (:blue500 colors)
              :on-click (fn []
                          (reset! changed false)
-                         (.commit @archive))
+                         (.commit ^js @archive))
              :disabled (or
                         (not @owner)
                         (not @changed))}
