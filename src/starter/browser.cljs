@@ -327,7 +327,7 @@
   ;; this is controlled by the :after-load in the config
 
   (let [location (if (= js/window.location.hostname "localhost")
-                   "dat://cedc20827cfaa728deb86424dd0e53e4e05b040a734e9cf2367f9e5ff0e4676b"
+                   "dat://ddb2c76c69d3245c95ba77c29b7c5f206a60f30cb3c69bd8c2389a74429c1f23"
                    (.toString js/window.location))]
     (browse-daturl location))
 
