@@ -93,7 +93,11 @@
                  "contents"
                  (filter
                   (fn [file]
-                    (.startsWith (file "name") (str (directory "name") "/")))
+                    (let [dir-name (str (directory "name") "/")
+                          index (count dir-name)]
+                      (and
+                        (.startsWith (file "name") dir-name)
+                        (nil? (clojure.string/index-of (file "name") "/" index)))))
                   files)))
         directories)
       (filter #(not (clojure.string/includes? (% "name") "/")) files))))
