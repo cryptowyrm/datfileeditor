@@ -6,7 +6,7 @@
 - [x] Disable Save button after saving
 - [x] Show folders as expandable list items (right now the list just displays all files and folders without any tree structure)
 - [x] Handle subdirectories in file list
-- [ ] Configure CodeMirror syntax highlighting based on the selected file's extension (right now JavaScript is hardcoded so it's used for every opened file)
+- [x] Configure CodeMirror syntax highlighting based on the selected file's extension (right now JavaScript is hardcoded so it's used for every opened file)
 - [ ] The app opens a test Dat archive by default, could instead show some info about the app and only show a Dat archive once the user has opened one with the "Open Dat archive" button
 - [ ] Make sure only text files are opened in the editor, not binary files
 - [x] Make sure things like save button is disabled for read-only archives and show somewhere in the UI if an archive is writable or read-only

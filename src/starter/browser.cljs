@@ -6,6 +6,11 @@
     ["react-codemirror2" :as code-mirror]
     ["codemirror/mode/javascript/javascript"]
     ["codemirror/mode/markdown/markdown"]
+    ["codemirror/mode/coffeescript/coffeescript"]
+    ["codemirror/mode/css/css"]
+    ["codemirror/mode/xml/xml"]
+    ["codemirror/mode/shell/shell"]
+    ["codemirror/mode/htmlmixed/htmlmixed"]
 
     ;; Material UI styles
     ["material-ui/styles/colors" :as jscolors]
@@ -35,6 +40,20 @@
                             :archive nil
                             :selected-file nil
                             :wrap-lines false}))
+
+;; Filetypes
+(def filetypes-image
+  ["jpg" "jpeg" "png" "gif"])
+
+(def filetypes-codemirror
+  {"md" "markdown"
+   "js" "javascript"
+   "json" "javascript"
+   "coffee" "coffeescript"
+   "css" "css"
+   "html" "htmlmixed"
+   "xml" "xml"
+   "sh" "shell"})
 
 ;; Beaker API methods
 
@@ -150,8 +169,15 @@
          :on-click
           (fn [e]
             (when-not (.isDirectory (file "stat"))
-              (swap! app-state assoc :selected-file file)
-              (swap! app-state assoc :selected-file-edited nil)
+              (swap! app-state assoc :selected-file file
+                                     :selected-file-edited nil
+                                     :mode nil)
+              (when-let [index (clojure.string/last-index-of (file "name") ".")]
+                (let [file-ending (subs (file "name") (+ index 1))
+                      mode (get filetypes-codemirror file-ending)]
+                  (js/console.log (str (file "name") " - " index " - " file-ending " - " mode))
+                  (when mode
+                    (swap! app-state assoc :mode mode))))
               (-> (.readFile (:archive @app-state) (file "name"))
                   (.then #(swap! app-state assoc :selected-file-content %)))))}])))
 
@@ -179,7 +205,8 @@
   (let [selected-file (r/cursor app-state [:selected-file])
         selected-file-content (r/cursor app-state [:selected-file-content])
         selected-file-edited (r/cursor app-state [:selected-file-edited])
-        wrap-lines (r/cursor app-state [:wrap-lines])]
+        wrap-lines (r/cursor app-state [:wrap-lines])
+        mode (r/cursor app-state [:mode])]
     (fn []
       [:div {:style {:flex 1
                      :display "flex"
@@ -200,7 +227,7 @@
            :class-name "react-cm-flex"
            :options {:line-numbers true
                      :line-wrapping @wrap-lines
-                     :mode "javascript"}
+                     :mode @mode}
            :on-change (fn [editor data value]
                         (if-not (= value @selected-file-content)
                           (reset! selected-file-edited value)))}]]])))
