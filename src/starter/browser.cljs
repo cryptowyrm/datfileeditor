@@ -58,18 +58,28 @@
     (.then
      (fn [archive]
        (js/console.log archive)
-       (swap! app-state assoc :archive archive)
+       (swap! app-state assoc :archive archive
+                              :selected-file nil
+                              :selected-file-content nil
+                              :selected-file-edited nil)
        (archive-changed archive
         (fn [changed]
           (swap! app-state assoc :changed changed)))
-       (.getInfo archive)))
+       (.getInfo archive))
+     (fn [e]
+       (js/console.log "select-archive error: " e)))
     (.then
      (fn [info]
        (swap! app-state assoc :owner (aget info "isOwner"))
        (js/console.log (:owner @app-state))
        (.readdir (:archive @app-state) "/" #js{:stat true
-                                               :recursive (boolean recursive?)})))
-    (.then #(f (js->clj %)))))
+                                               :recursive (boolean recursive?)}))
+     (fn [e]
+       (js/console.log "select-archive error: " e)))
+    (.then
+     #(f (js->clj %))
+     (fn [e]
+       (js/console.log "select-archive error: " e)))))
 
 ;; Utility methods
 
