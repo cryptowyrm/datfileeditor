@@ -142,8 +142,12 @@
                   (.then #(swap! app-state assoc :selected-file-content %)))))}])))
 
 (defn files-list []
-  (let [files (r/cursor app-state [:files])]
+  (let [archive (r/cursor app-state [:archive])
+        files (r/cursor app-state [:files])]
     (fn []
+      ^{:key (if @archive
+               (.-url @archive)
+               (random-uuid))}
       [:> paper/default
         {:z-depth 1
          :style {:padding 0
