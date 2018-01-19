@@ -197,6 +197,7 @@
          :style {:padding 0
                  :margin 20
                  :flex 1
+                 :max-width 350
                  :overflow-y "auto"}}
         [:> paper/default
           {:z-depth 1}
