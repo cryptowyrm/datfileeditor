@@ -174,6 +174,9 @@
                   :padding 0
                   :margin 20
                   :margin-left 0}}
+        ^{:key (if @selected-file
+                 (@selected-file "name")
+                 (random-uuid))}
         [:> code-mirror/UnControlled
           {:value @selected-file-content
            :class-name "react-cm-flex"
