@@ -99,8 +99,8 @@
                         (.startsWith (file "name") dir-name)
                         (nil? (clojure.string/index-of (file "name") "/" index)))))
                   files)))
-        directories)
-      (filter #(not (clojure.string/includes? (% "name") "/")) files))))
+        (sort-by #(% "name") directories))
+      (sort-by #(% "name") (filter #(not (clojure.string/includes? (% "name") "/")) files)))))
 
 (def colors
   (js->clj jscolors :keywordize-keys true))
