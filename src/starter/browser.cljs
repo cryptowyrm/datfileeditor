@@ -183,7 +183,7 @@
                                      :selected-file-edited nil
                                      :mode nil)
               (when-let [index (clojure.string/last-index-of (file "name") ".")]
-                (let [file-ending (subs (file "name") (+ index 1))
+                (let [file-ending (.toLowerCase (subs (file "name") (+ index 1)))
                       mode (get filetypes-codemirror file-ending)]
                   (js/console.log (str (file "name") " - " index " - " file-ending " - " mode))
                   (when mode
