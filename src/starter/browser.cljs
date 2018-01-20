@@ -106,6 +106,10 @@
 ;; Utility methods
 
 (defn file-tree [files-list]
+  "Takes a flat list of files as returned by the DatArchive API by using
+  the readdir API method and returns a sequence representing a tree, where
+  files that point to a directory have a key 'contents' that contains a
+  sequence of files in that directory."
   (let [directories (filter #(.isDirectory (% "stat")) files-list)
         files (filter #(not (.isDirectory (% "stat"))) files-list)]
     (concat
@@ -146,6 +150,7 @@
 (def theme (get-theme/default #js {}))
 
 (defn list-item-file [file]
+  "A ListItem react component representing a file or directoy."
   (let [expanded (r/atom false)]
     (fn [file]
       [:> list-item/default
@@ -186,6 +191,7 @@
                   (.then #(swap! app-state assoc :selected-file-content %)))))}])))
 
 (defn files-list []
+  "A List react component that can show a list of file ListItems"
   (let [archive (r/cursor app-state [:archive])
         files (r/cursor app-state [:files])]
     (fn []
@@ -207,6 +213,7 @@
               [list-item-file file])]]])))
 
 (defn editor []
+  "CodeMirror react component"
   (let [selected-file (r/cursor app-state [:selected-file])
         selected-file-content (r/cursor app-state [:selected-file-content])
         selected-file-edited (r/cursor app-state [:selected-file-edited])
@@ -238,6 +245,8 @@
                           (reset! selected-file-edited value)))}]]])))
 
 (defn dat-input []
+  "A react component that displays a text field and a button that lets you
+  enter the URL to and open a Dat Archive."
   (let [text (atom "")
         daturl (r/atom app-state [:daturl])]
     [:div
@@ -250,6 +259,7 @@
         "Browse daturl"]]))
 
 (defn app-toolbar []
+  "A React component that displays the toolbar of the app"
   (let [wrap-lines (r/cursor app-state [:wrap-lines])
         archive (r/cursor app-state [:archive])
         changed (r/cursor app-state [:changed])
@@ -304,6 +314,7 @@
                            (reset! wrap-lines checked))}]]]]])))
 
 (defn content []
+  "The root React component of the app"
   (let []
     (fn []
       [:div
