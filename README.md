@@ -1,22 +1,32 @@
-# shadow-cljs - browser quickstart
+## Dat File Editor for the Beaker Browser
 
-This is a minimum template you can use as the basis for CLJS projects intended to run in the browser.
+A little [Dat archive](https://datproject.org/) file editor I'm developing to learn [Beaker Browser](https://beakerbrowser.com/)'s [Dat API](https://beakerbrowser.com/docs/apis/).
 
-## Required Software
+Developed with [ClojureScript](https://clojurescript.org/) & [Reagent](https://reagent-project.github.io/) (minimalistic wrapper on top of [React](https://reactjs.org/)). Uses [CodeMirror](https://codemirror.net/) for the editor component, so that code you edit is syntax highlighted.
+
+This project is built on top of the [Shadow-CLJS browser quickstart template](https://github.com/shadow-cljs/quickstart-browser), so it uses [Shadow-CLJS](http://shadow-cljs.org/) as the build tool instead of Leiningen or boot. The reason for choosing Shadow-CLJS is its better support for npm packages, should make working with Beaker libraries like [WebDB](https://github.com/beakerbrowser/webdb) easier. Also, I wanted to learn how to use it since I already know Leiningen and boot.
+
+This Readme is also a modified version of the Readme from the template since it explains very well how to easily use Shadow-CLJS if you've never used it before.
+
+## Required Development Software
 
 - [node.js v6.0.0+](https://nodejs.org/en/download/)
 - [Java8](http://www.oracle.com/technetwork/java/javase/downloads/index.html) (Java9 has some issues, so stick with Java SE 8 for now). OpenJDK also works.
 
-## Running the Example
+## Running the app for development
+
+Clone this repository and then execute the following command in a terminal inside the cloned folder to install the needed dependencies:
 
 ```bash
-git clone https://github.com/shadow-cljs/quickstart-browser.git quickstart
-cd quickstart
 npm install
+```
+Now execute the following command to open up a Clojure REPL for the project:
+
+```bash
 npx shadow-cljs clj-repl
 ```
 
-The first startup takes a bit of time since it has to download all the dependencies and do some prep work. Once this is running we can get started.
+To start the development server which automatically compiles code when you change it and hot reloads the changes into the running website, execute the following command:
 
 ```txt
 (shadow/watch :app)
@@ -30,95 +40,29 @@ Either way you should see a message like this:
 [:app] Build completed. (23 files, 4 compiled, 0 warnings, 7.41s)
 ```
 
-When you do you can start using the integrated development server to open the page in the browser.
+When you do, you can open the following URL in the Beaker Browser to see the app: http://localhost:8020
 
-```txt
-open http://localhost:8020
-```
-
-The app is only a very basic skeleton with the most useful development tools configured.
-
-`shadow-cljs` is configured by the `shadow-cljs.edn` config. It looks like this:
-
-```clojure
-{:source-paths
- ["src"] ;; .cljs files go here
-
- :dependencies
- [] ;; covered later
-
- :builds
- {:app {:target :browser
-        :output-dir "public/js"
-        :asset-path "/js"
-
-        :modules
-        {:main ;; <- becomes public/js/main.js
-         {:entries [starter.browser]}}
-
-        :devtools
-        ;; before live-reloading any code call this function
-        {:before-load starter.browser/stop
-         ;; after live-reloading finishes call this function
-         :after-load starter.browser/start
-         ;; serve the public directory over http at port 8020
-         :http-root "public"
-         :http-port 8020}
-        }}}
-```
-
-It defines the `:app` build with the `:target` set to `:browser`. All output will be written to `public/js` which is a path relative to the project root (ie. the directory the `shadow-cljs.edn` config is in).
-
-`:modules` defines the how the output should be bundled together. For now we just want one file. The `:main` module will be written to `public/js/main.js`, it will include the code from the `:entries` and all their dependencies.
-
-`:devtools` configures some useful development things. The `http://localhost:8020` server we used earlier is controlled by the `:http-port` and serves the `:http-root` directory.
-
-`:before-load` and `:after-load` are useful callbacks that will be used by the devtools when live-reloading code. They are optional but they control the live-reload. If you do not need any callbacks just configure `:autoload true`.
-
-The last part is the actual `index.html` that is loaded when you open `http://localhost:8020`. It loads the generated `/js/main.js` and then calls `start.browser.init` which we defined in the `src/start/browser.cljs`.
-
-```html
-<!doctype html>
-<html>
-<head><title>Browser Starter</title></head>
-<body>
-<h1>shadow-cljs - Browser</h1>
-<div id="app"></div>
-
-<script src="/js/main.js"></script>
-<script>starter.browser.init();</script>
-</body>
-</html>
-```
-
-`init` is only called once and it calls `start` when done. During development the devtools will then call `stop` whenever it wants to reload some code. When its done doing that it will call `start` again but not `init`. You do not have to use this setup but it is what I recommend and it has worked well for me.
-
-## Live reload
-
-To see the live reload in action you can edit the `src/start/browser.cljs`. Some output will be printed in the browser console.
+You can now start making changes to the code and the changes will get hot reloaded in Beaker Browser when you save.
 
 ## REPL
 
-During development it the REPL is very useful. The `clj-repl` process we started by default is a Clojure REPL which can control the `shadow-cljs` tool itself. Every command can also be directly used from the command line, so you do not have to use the REPL.
-
-To switch to the ClojureScript REPL for our build do
+To switch the running Clojure repl to the ClojureScript REPL to interact with the app:
 
 ```
-[1:0]~shadow.user=> (shadow/repl :app)
-[1:1]~cljs.user=>
+(shadow/repl :app)
 ```
 
-From the command line use `npx shadow-cljs cljs-repl app`.
+Or from the command line use `npx shadow-cljs cljs-repl app`.
 
 This can now be used to eval code in the browser (assuming you still have it open). Try `(js/alert "Hi.")` and take it from there.
 
-You can get back to the Clojure REPL by typing `:repl/quit`. You can switch back to the CLJS REPL at any point.
+You can get back to the Clojure REPL by typing `:repl/quit`.
 
 ## Release
 
-The `watch` process we started is all about development. It injects the code required for the REPL and the all other devtools but we do not want any of that when putting the code into "production" (ie. making it available publicly).
+The `watch` process is all about development. It injects the code required for the REPL and all other devtools but we do not want any of that when putting the code into production.
 
-The `release` action will remove all development code and run the code through the Closure Compiler to produce a minified `main.js` file. Since that will overwrite the file created by the `watch` we first need to stop that.
+The `release` action will remove all development code and run the code through Google's Closure Compiler to produce a minified `main.js` file. Since that will overwrite the file created by the `watch` we first need to stop that.
 
 ```
 (shadow/stop-worker :app)
@@ -127,6 +71,4 @@ The `release` action will remove all development code and run the code through t
 
 Or in the command line stop the `npx shadow-cljs watch` process by CTRL+C and then `npx shadow-cljs release app`.
 
-When done you can open `http://localhost:8020` and see the `release` build in action. At this point you would usually copy the `public` directory to the "production" web server.
-
-Note that in the default config we overwrote the `public/js/main.js` created by the `watch`. You can also configure a different path to use for release builds but writing the output to the same file means we do not have to change the `index.html` and test everything as is.
+When done you can open `http://localhost:8020` and see the `release` build in action. At this point you can copy the `public` directory to a new site created in the Beaker Browser to publish it.
