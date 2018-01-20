@@ -170,6 +170,7 @@
                          (clj->js
                            (for [file (file "contents")]
                              (r/as-element
+                               ^{:key (file "name")}
                                [list-item-file file]))))
          :nested-list-style {:margin-left 10}
          :primary-toggles-nested-list (when-not (empty? (file "contents")) true)
