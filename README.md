@@ -2,6 +2,10 @@
 
 A little [Dat archive](https://datproject.org/) file editor I'm developing to learn [Beaker Browser](https://beakerbrowser.com/)'s [Dat API](https://beakerbrowser.com/docs/apis/).
 
+A live version of the app can be viewed within the Beaker Browser under the following URL: dat://editor-cryptic.hashbase.io
+
+![Screenshot](https://i.imgur.com/DPnyPFn.png)
+
 Developed with [ClojureScript](https://clojurescript.org/) & [Reagent](https://reagent-project.github.io/) (minimalistic wrapper on top of [React](https://reactjs.org/)). Uses [CodeMirror](https://codemirror.net/) for the editor component, so that code you edit is syntax highlighted.
 
 This project is built on top of the [Shadow-CLJS browser quickstart template](https://github.com/shadow-cljs/quickstart-browser), so it uses [Shadow-CLJS](http://shadow-cljs.org/) as the build tool instead of Leiningen or boot. The reason for choosing Shadow-CLJS is its better support for npm packages, should make working with Beaker libraries like [WebDB](https://github.com/beakerbrowser/webdb) easier. Also, I wanted to learn how to use it since I already know Leiningen and boot.
