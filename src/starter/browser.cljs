@@ -180,15 +180,18 @@
 (defn list-item-file [file]
   "A ListItem react component representing a file or directoy."
   (let [expanded (r/atom false)
+        owner (r/cursor app-state [:owner])
         selected-file (r/cursor app-state [:selected-file])
         selected-file-edited (r/cursor app-state [:selected-file-edited])
         changed-files (r/cursor app-state [:changed-files])]
     (fn [file]
       [:> list-item/default
         {:primary-text (file "name")
-         :style {:color (when (or (@changed-files (file "name"))
-                                  (and (= @selected-file file)
-                                       @selected-file-edited))
+         :style {:color (when
+                          (and @owner
+                               (or (@changed-files (file "name"))
+                                   (and (= @selected-file file)
+                                        @selected-file-edited)))
                           "blue")}
          :left-icon
           (if (.isDirectory (file "stat"))
