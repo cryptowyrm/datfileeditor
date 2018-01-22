@@ -41,7 +41,8 @@
 (defonce app-state (r/atom {:files []
                             :archive nil
                             :selected-file nil
-                            :wrap-lines false}))
+                            :wrap-lines false
+                            :changed-files {}}))
 
 ;; Filetypes
 (def filetypes-image
@@ -83,7 +84,8 @@
        (swap! app-state assoc :archive archive
                               :selected-file nil
                               :selected-file-content nil
-                              :selected-file-edited nil)
+                              :selected-file-edited nil
+                              :changed-files {})
        (archive-changed archive
         (fn [changed]
           (swap! app-state assoc :changed changed)))
@@ -151,10 +153,17 @@
 
 (defn list-item-file [file]
   "A ListItem react component representing a file or directoy."
-  (let [expanded (r/atom false)]
+  (let [expanded (r/atom false)
+        selected-file (r/cursor app-state [:selected-file])
+        selected-file-edited (r/cursor app-state [:selected-file-edited])
+        changed-files (r/cursor app-state [:changed-files])]
     (fn [file]
       [:> list-item/default
         {:primary-text (file "name")
+         :style {:color (when (or (@changed-files (file "name"))
+                                  (and (= @selected-file file)
+                                       @selected-file-edited))
+                          "blue")}
          :left-icon
           (if (.isDirectory (file "stat"))
             (if @expanded
@@ -179,17 +188,27 @@
          :on-click
           (fn [e]
             (when-not (.isDirectory (file "stat"))
+              ; preserve unsaved changes before switching files
+              (if @selected-file-edited
+                (swap! changed-files assoc (get @selected-file "name")
+                                           @selected-file-edited))
+              ; reset current file editing data
               (swap! app-state assoc :selected-file file
                                      :selected-file-edited nil
                                      :mode nil)
+              ; set syntax highlighting if available
               (when-let [index (clojure.string/last-index-of (file "name") ".")]
                 (let [file-ending (.toLowerCase (subs (file "name") (+ index 1)))
                       mode (get filetypes-codemirror file-ending)]
                   (js/console.log (str (file "name") " - " index " - " file-ending " - " mode))
                   (when mode
                     (swap! app-state assoc :mode mode))))
-              (-> (.readFile ^js (:archive @app-state) (file "name"))
-                  (.then #(swap! app-state assoc :selected-file-content %)))))}])))
+              ; read file from Dat archive unless there are unsaved changes
+              (if-let [old-edit (@changed-files (file "name"))]
+                (swap! app-state assoc :selected-file-content old-edit
+                                       :selected-file-edited old-edit)
+                (-> (.readFile ^js (:archive @app-state) (file "name"))
+                    (.then #(swap! app-state assoc :selected-file-content %))))))}])))
 
 (defn files-list []
   "A List react component that can show a list of file ListItems"
@@ -265,6 +284,7 @@
         archive (r/cursor app-state [:archive])
         changed (r/cursor app-state [:changed])
         owner (r/cursor app-state [:owner])
+        changed-files (r/cursor app-state [:changed-files])
         selected-file (r/cursor app-state [:selected-file])
         selected-file-content (r/cursor app-state [:selected-file-content])
         selected-file-edited (r/cursor app-state [:selected-file-edited])]
@@ -295,6 +315,7 @@
              :on-click (fn []
                          (reset! selected-file-content @selected-file-edited)
                          (reset! selected-file-edited nil)
+                         (swap! changed-files assoc (@selected-file "name") nil)
                          (-> (.writeFile ^js @archive (@selected-file "name") @selected-file-content)
                              (.then #(reset! changed true))))}
             "Save"]
