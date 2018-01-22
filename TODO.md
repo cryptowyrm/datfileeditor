@@ -3,6 +3,7 @@
 ## Bugs
 
 - [ ] Make sure Undo (Ctrl+Z) doesn't go back to prior opened files (partially fixed, still goes back one file sometimes due to react CodeMirror component not always being re-created when switching files)
+- [ ] If opening the drawer results in the editor needing a horizontal scrollbar, it's not shown until the editor component is redrawn (for example by toggling wrap lines)
 
 ## Future updates
 
