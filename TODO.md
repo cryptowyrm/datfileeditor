@@ -12,6 +12,5 @@
 - [ ] Add diff to see what changed in files, either before publishing or with a new diff button
 - [ ] Add revert button to discard all non-published changes
 - [ ] Add dark theme
-- [ ] Add font size setting
 - [ ] Add button that lets the user revert unsaved changes, which would just load the file state from the DatArchive.
 - [ ] Add button to save all unsaved files

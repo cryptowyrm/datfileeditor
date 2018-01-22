@@ -26,6 +26,8 @@
     ["material-ui/List/List" :as list]
     ["material-ui/List/ListItem" :as list-item]
     ["material-ui/AppBar" :as appbar]
+    ["material-ui/Drawer" :as drawer]
+    ["material-ui/Slider" :as slider]
     ["material-ui/Paper" :as paper]
     ["material-ui/RaisedButton" :as button]
     ["material-ui/Toggle" :as toggle]
@@ -38,11 +40,16 @@
 
 ;; App state
 
+(defn default-settings []
+  {:font-size 12})
+
 (defonce app-state (r/atom {:files []
                             :archive nil
                             :selected-file nil
                             :wrap-lines false
-                            :changed-files {}}))
+                            :changed-files {}
+                            :drawer-open false
+                            :settings (default-settings)}))
 
 ;; Filetypes
 (def filetypes-image
@@ -106,6 +113,25 @@
        (js/console.log "select-archive error: " e)))))
 
 ;; Utility methods
+
+(defn setting-for [setting-key]
+  (let [setting (get-in @app-state [:settings setting-key])]
+    (if (nil? setting)
+      (do
+        (swap! app-state assoc-in [:settings setting-key] (setting-key (default-settings)))
+        (setting-key (default-settings)))
+      setting)))
+
+(defn load-settings []
+  (let [settings (r/cursor app-state [:settings])
+        loaded (js/JSON.parse (.getItem js/localStorage "settings"))]
+    (if (nil? loaded)
+      nil
+      (reset! settings (js->clj loaded :keywordize-keys true)))))
+
+(defn save-settings []
+  (let [settings (r/cursor app-state [:settings])]
+    (.setItem js/localStorage "settings" (js/JSON.stringify (clj->js @settings)))))
 
 (defn file-tree [files-list]
   "Takes a flat list of files as returned by the DatArchive API by using
@@ -248,6 +274,7 @@
          {:style {:display "flex"
                   :flex-direction "column"
                   :flex 1
+                  :font-size (str (setting-for :font-size) "pt")
                   :padding 0
                   :margin 20
                   :margin-left 0}}
@@ -335,34 +362,66 @@
               :on-toggle (fn [event checked]
                            (reset! wrap-lines checked))}]]]]])))
 
+(defn app-drawer []
+  (let [settings (r/cursor app-state [:settings])
+        drawer-open (r/cursor app-state [:drawer-open])]
+    (fn []
+      [:> drawer/default
+       {:open @drawer-open}
+       [:div {:style {:padding 10}}
+        [:p "Font size: " (setting-for :font-size)]
+        [:> slider/default
+         {:default-value 12
+          :min 8
+          :max 40
+          :step 1
+          :on-change (fn [e value]
+                       (swap! settings assoc :font-size value)
+                       (save-settings)
+                       ; workaround to refresh font-size in CodeMirror
+                       (let [old-file (:selected-file @app-state)]
+                         (swap! app-state assoc :selected-file nil)
+                         (js/setTimeout
+                          (fn []
+                            (swap! app-state assoc :selected-file old-file)
+                            (r/force-update-all))
+                          500)))}]]])))
+
 (defn content []
   "The root React component of the app"
-  (let []
+  (let [drawer-open (r/cursor app-state [:drawer-open])]
     (fn []
       [:div
         [:> theme-provider/default {:theme theme}
-          [:div {:style {:display "flex"
-                         :flex-direction "column"
-                         :position "absolute"
-                         :top 0
-                         :left 0
-                         :right 0
-                         :bottom 0}}
-            [:> appbar/default {:title "Dat File Editor"}]
-            [app-toolbar]
-            [:div
-              {:class "twopane"
-               :style {:display "flex"
-                       :flex-direction "row"
-                       :flex 1}}
-              [files-list]
-              [editor]]]]])))
+          [:div
+           [app-drawer]
+           [:div {:id "app-container"
+                  :style {:display "flex"
+                          :flex-direction "column"
+                          :position "absolute"
+                          :top 0
+                          :left (if @drawer-open 256 0)
+                          :right 0
+                          :bottom 0}}
+             [:> appbar/default
+              {:title "Dat File Editor"
+               :on-left-icon-button-click #(swap! drawer-open not)}]
+             [app-toolbar]
+             [:div
+               {:class "twopane"
+                :style {:display "flex"
+                        :flex-direction "row"
+                        :flex 1}}
+               [files-list]
+               [editor]]]]]])))
 
 ;; App Lifecycle methods
 
 (defn start []
   ;; start is called by init and after code reloading finishes
   ;; this is controlled by the :after-load in the config
+
+  (load-settings)
 
   (let [location (if (= js/window.location.hostname "localhost")
                    "dat://ddb2c76c69d3245c95ba77c29b7c5f206a60f30cb3c69bd8c2389a74429c1f23"
