@@ -4,6 +4,7 @@
 
 - [ ] Make sure Undo (Ctrl+Z) doesn't go back to prior opened files (partially fixed, still goes back one file sometimes due to react CodeMirror component not always being re-created when switching files)
 - [ ] If opening the drawer results in the editor needing a horizontal scrollbar, it's not shown until the editor component is redrawn (for example by toggling wrap lines)
+- [ ] Expander arrows on file-list ListItems don't update color when switching between light and dark theme
 
 ## Future updates
 
