@@ -14,3 +14,4 @@
 - [ ] Add dark theme
 - [ ] Add button that lets the user revert unsaved changes, which would just load the file state from the DatArchive.
 - [ ] Add button to save all unsaved files
+- [ ] Find out if there is a better replacement for react-codemirror2, had to use very ugly workarounds to make opening multiple files and font-size setting work
