@@ -176,7 +176,7 @@
         (>= bytes 1024) (str (.toFixed (/ bytes 1024) 2) " kb")
         (>= bytes (* 1024 1024)) (str (.toFixed (/ bytes (* 1024 1024)) 2) " mb")))
 
-;; React Components
+;; Material UI Themes
 
 (def light-theme
   (get-theme/default light-base-theme/default))
@@ -199,6 +199,8 @@
          (:palette (js->clj dark-base-theme/default :keywordize-keys true))
          {:palette {:primary1Color "#303030"
                     :alternateTextColor (colors :white)}})))))
+
+;; React Components
 
 (defn list-item-file [file]
   "A ListItem react component representing a file or directoy."
