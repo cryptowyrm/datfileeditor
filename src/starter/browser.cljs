@@ -16,6 +16,8 @@
     ["material-ui/styles/colors" :as jscolors]
     ["material-ui/styles/getMuiTheme" :as get-theme]
     ["material-ui/styles/MuiThemeProvider" :as theme-provider]
+    ["material-ui/styles/baseThemes/lightBaseTheme" :as light-base-theme]
+    ["material-ui/styles/baseThemes/darkBaseTheme" :as dark-base-theme]
 
     ;; Material UI icons
     ["material-ui/svg-icons/file/folder" :as icon-folder]
@@ -41,7 +43,8 @@
 ;; App state
 
 (defn default-settings []
-  {:font-size 12})
+  {:font-size 12
+   :dark-theme false})
 
 (defonce app-state (r/atom {:files []
                             :archive nil
@@ -175,7 +178,27 @@
 
 ;; React Components
 
-(def theme (get-theme/default #js {}))
+(def light-theme
+  (get-theme/default light-base-theme/default))
+
+(def dark-theme-toolbar
+  (get-theme/default
+    (clj->js
+     (merge
+       (js->clj dark-base-theme/default :keywordize-keys true)
+       {:palette {:primary1Color "#303030"
+                  :alternateTextColor (colors :white)}}))))
+
+(def dark-theme
+  (get-theme/default
+    (clj->js
+     (assoc
+       (js->clj dark-base-theme/default :keywordize-keys true)
+       :palette
+       (merge
+         (:palette (js->clj dark-base-theme/default :keywordize-keys true))
+         {:palette {:primary1Color "#303030"
+                    :alternateTextColor (colors :white)}})))))
 
 (defn list-item-file [file]
   "A ListItem react component representing a file or directoy."
@@ -289,7 +312,10 @@
            :class-name "react-cm-flex"
            :options {:line-numbers true
                      :line-wrapping @wrap-lines
-                     :mode @mode}
+                     :mode @mode
+                     :theme (if (setting-for :dark-theme)
+                              "dracula"
+                              "default")}
            :on-change (fn [editor data value]
                         (if-not (= value @selected-file-content)
                           (reset! selected-file-edited value)))}]]])))
@@ -325,6 +351,8 @@
                  :margin-bottom 0
                  :padding 0}}
         [:> toolbar/default
+         {:style {:background-color (when (setting-for :dark-theme)
+                                      (:grey800 colors))}}
          [:> toolbar-group/default {:first-child true}
           [:> button/default
             {:on-click (fn []
@@ -388,14 +416,29 @@
                           (fn []
                             (swap! app-state assoc :selected-file old-file)
                             (r/force-update-all))
-                          500)))}]]])))
+                          500)))}]]
+       [:> list/default
+        [:> list-item/default
+         {:primary-text "Dark theme"
+          :right-toggle
+          (r/as-element
+            [:> toggle/default
+             {:toggled (setting-for :dark-theme)
+              :on-toggle (fn [e toggled]
+                           (swap! settings assoc :dark-theme toggled)
+                           (save-settings)
+                           (r/after-render
+                             (fn []
+                               (r/force-update-all))))}])}]]])))
 
 (defn content []
   "The root React component of the app"
   (let [drawer-open (r/cursor app-state [:drawer-open])]
     (fn []
       [:div
-        [:> theme-provider/default {:theme theme}
+        [:> theme-provider/default {:mui-theme (if (setting-for :dark-theme)
+                                                 dark-theme
+                                                 light-theme)}
           [:div
            [app-drawer]
            [:div {:id "app-container"
@@ -405,11 +448,21 @@
                           :top 0
                           :left (if @drawer-open 256 0)
                           :right 0
-                          :bottom 0}}
-             [:> appbar/default
-              {:title "Dat File Editor"
-               :on-left-icon-button-click #(swap! drawer-open not)}]
-             [app-toolbar]
+                          :bottom 0
+                          :background (when (setting-for :dark-theme)
+                                        "#303030")}}
+             (if (setting-for :dark-theme)
+               [:> theme-provider/default {:mui-theme dark-theme-toolbar}
+                [:div
+                 [:> appbar/default
+                  {:title "Dat File Editor"
+                   :on-left-icon-button-click #(swap! drawer-open not)}]
+                 [app-toolbar]]]
+               [:div
+                [:> appbar/default
+                 {:title "Dat File Editor"
+                  :on-left-icon-button-click #(swap! drawer-open not)}]
+                [app-toolbar]])
              [:div
                {:class "twopane"
                 :style {:display "flex"
