@@ -187,7 +187,19 @@
      (merge
        (js->clj dark-base-theme/default :keywordize-keys true)
        {:palette {:primary1Color "#303030"
-                  :alternateTextColor (colors :white)}}))))
+                  :primary2Color "#ffffff"
+                  :primary3Color (:grey600 colors)
+                  :accent1Color (:pinkA200 colors)
+                  :accent2Color (:grey400 colors)
+                  :accent3Color (:pinkA100 colors)
+                  :textColor (:fullWhite colors)
+                  :secondaryTextColor (:grey700 colors)
+                  :canvasColor "#303030"
+                  :borderColor (:grey300 colors)
+                  :disabledColor (:grey300 colors)
+                  :pickerHeaderColor (:grey100 colors)
+                  :clockCircleColor (:grey100 colors)
+                  :alternateTextColor "#ffffff"}}))))
 
 (def dark-theme
   (get-theme/default
@@ -217,7 +229,7 @@
                                (or (@changed-files (file "name"))
                                    (and (= @selected-file file)
                                         @selected-file-edited)))
-                          "blue")}
+                          (:blue400 colors))}
          :left-icon
           (if (.isDirectory (file "stat"))
             (if @expanded
@@ -360,7 +372,7 @@
                          (select-archive
                            #(swap! app-state assoc :files %)
                            :recursive? true))
-             :background-color (:grey400 colors)
+             :background-color (:blue500 colors)
              :style {:min-width 160}}
             "Open Dat archive"]
           (if-not @owner
@@ -390,6 +402,10 @@
           [:div
            [:> toggle/default
              {:label "Wrap lines"
+              :thumb-switched-style (when (setting-for :dark-theme)
+                                      {:background-color (:cyan500 colors)})
+              :track-switched-style (when (setting-for :dark-theme)
+                                      {:background-color (:cyan800 colors)})
               :toggled @wrap-lines
               :on-toggle (fn [event checked]
                            (reset! wrap-lines checked))}]]]]])))
