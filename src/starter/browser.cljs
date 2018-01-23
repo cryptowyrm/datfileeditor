@@ -168,13 +168,13 @@
     (readdir archive "/"
       (fn [files]
         (js/console.log (clj->js files))
-        (swap! app-state assoc :archive archive)
-        (swap! app-state assoc :files files)))))
+        (swap! app-state assoc :archive archive
+                               :files files)))))
 
 (defn format-bytes [bytes]
-  (cond (< bytes 1024) (str bytes " bytes")
+  (cond (>= bytes (* 1024 1024)) (str (.toFixed (/ bytes (* 1024 1024)) 2) " mb")
         (>= bytes 1024) (str (.toFixed (/ bytes 1024) 2) " kb")
-        (>= bytes (* 1024 1024)) (str (.toFixed (/ bytes (* 1024 1024)) 2) " mb")))
+        (< bytes 1024) (str bytes " bytes")))
 
 ;; Material UI Themes
 
@@ -203,7 +203,7 @@
 ;; React Components
 
 (defn list-item-file [file]
-  "A ListItem react component representing a file or directoy."
+  "A ListItem React component representing a file or directoy."
   (let [expanded (r/atom false)
         owner (r/cursor app-state [:owner])
         selected-file (r/cursor app-state [:selected-file])
@@ -265,7 +265,7 @@
                     (.then #(swap! app-state assoc :selected-file-content %))))))}])))
 
 (defn files-list []
-  "A List react component that can show a list of file ListItems"
+  "A List React component that can show a list of file ListItems"
   (let [archive (r/cursor app-state [:archive])
         files (r/cursor app-state [:files])]
     (fn []
@@ -287,7 +287,7 @@
               [list-item-file file])]]])))
 
 (defn editor []
-  "CodeMirror react component"
+  "CodeMirror React component"
   (let [selected-file (r/cursor app-state [:selected-file])
         selected-file-content (r/cursor app-state [:selected-file-content])
         selected-file-edited (r/cursor app-state [:selected-file-edited])
@@ -323,7 +323,7 @@
                           (reset! selected-file-edited value)))}]]])))
 
 (defn dat-input []
-  "A react component that displays a text field and a button that lets you
+  "A React component that displays a text field and a button that lets you
   enter the URL to and open a Dat Archive."
   (let [text (atom "")
         daturl (r/atom app-state [:daturl])]
@@ -333,7 +333,6 @@
                :default-value @text
                :on-change (fn [e] (swap! text #(-> e .-target .-value)))}]
       [:button {:on-click #(browse-daturl @text)}
-
         "Browse daturl"]]))
 
 (defn app-toolbar []
@@ -396,6 +395,8 @@
                            (reset! wrap-lines checked))}]]]]])))
 
 (defn app-drawer []
+  "A React component that display a drawer with settings that can be
+  expanded by clicking on the burger menu in the AppBar component"
   (let [settings (r/cursor app-state [:settings])
         drawer-open (r/cursor app-state [:drawer-open])]
     (fn []
@@ -481,11 +482,6 @@
 
   (load-settings)
 
-  (let [location (if (= js/window.location.hostname "localhost")
-                   "dat://ddb2c76c69d3245c95ba77c29b7c5f206a60f30cb3c69bd8c2389a74429c1f23"
-                   (.toString js/window.location))]
-    (browse-daturl location))
-
   (r/render [content]
             (js/document.getElementById "app")))
 
@@ -493,6 +489,12 @@
   ;; init is called ONCE when the page loads
   ;; this is called in the index.html and must be exported
   ;; so it is available even in :advanced release builds
+
+  (let [location (if (= js/window.location.hostname "localhost")
+                   "dat://ddb2c76c69d3245c95ba77c29b7c5f206a60f30cb3c69bd8c2389a74429c1f23"
+                   (.toString js/window.location))]
+    (browse-daturl location))
+
   (start))
 
 (defn stop [])
