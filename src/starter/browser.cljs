@@ -292,7 +292,7 @@
                  :max-width 350
                  :overflow-y "auto"}}
         [:> paper/default
-          {:z-depth 1}
+          {:z-depth 0}
           [:> list/default
             (for [file (file-tree @files)]
               ^{:key (file "name")}
