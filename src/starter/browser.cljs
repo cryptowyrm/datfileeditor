@@ -454,7 +454,10 @@
   "The root React component of the app"
   (let [drawer-open (r/cursor app-state [:drawer-open])]
     (fn []
-      [:div
+      [:div {:style {:width "100%"
+                     :height "100%"
+                     :background-color (when (setting-for :dark-theme)
+                                         "#303030")}}
         [:> theme-provider/default {:mui-theme (if (setting-for :dark-theme)
                                                  dark-theme
                                                  light-theme)}
