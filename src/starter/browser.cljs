@@ -287,7 +287,7 @@
       [:> paper/default
         {:z-depth 1
          :style {:padding 0
-                 :margin 20
+                 :margin 10
                  :flex 1
                  :max-width 350
                  :overflow-y "auto"}}
@@ -316,7 +316,7 @@
                   :flex 1
                   :font-size (str (setting-for :font-size) "pt")
                   :padding 0
-                  :margin 20
+                  :margin 10
                   :margin-left 0}}
         ^{:key (if @selected-file
                  (@selected-file "name")
@@ -360,7 +360,7 @@
     (fn []
       [:> paper/default
         {:z-depth 1
-         :style {:margin 20
+         :style {:margin 10
                  :margin-bottom 0
                  :padding 0}}
         [:> toolbar/default
