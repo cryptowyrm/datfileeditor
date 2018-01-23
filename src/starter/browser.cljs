@@ -364,8 +364,8 @@
                  :margin-bottom 0
                  :padding 0}}
         [:> toolbar/default
-         {:style {:background-color (when (setting-for :dark-theme)
-                                      (:grey800 colors))}}
+         {:style (when (setting-for :dark-theme)
+                   {:background-color (:grey800 colors)})}
          [:> toolbar-group/default {:first-child true}
           [:> button/default
             {:on-click (fn []
