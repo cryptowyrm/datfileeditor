@@ -175,6 +175,23 @@
         (>= bytes 1024) (str (.toFixed (/ bytes 1024) 2) " kb")
         (< bytes 1024) (str bytes " bytes")))
 
+(defn save-file []
+  (let [selected-file (r/cursor app-state [:selected-file])
+        selected-file-content (r/cursor app-state [:selected-file-content])
+        selected-file-edited (r/cursor app-state [:selected-file-edited])
+        changed-files (r/cursor app-state [:changed-files])
+        changed (r/cursor app-state [:changed])
+        archive (r/cursor app-state [:archive])]
+    (when @selected-file-edited
+      (swap! changed-files assoc (@selected-file "name") nil)
+      (-> (.writeFile ^js @archive (@selected-file "name") @selected-file-edited)
+          (.then (fn []
+                   (reset! selected-file-edited nil)
+                   (reset! changed true)))
+          (.catch
+           (fn [e]
+             (js/console.log "save-file .writeFile error: " e)))))))
+
 ;; Material UI Themes
 
 (def light-theme
@@ -330,7 +347,9 @@
                      :mode @mode
                      :theme (if (setting-for :dark-theme)
                               "dracula"
-                              "default")}
+                              "default")
+                     :extra-keys {"Ctrl-S" #(save-file)
+                                  "Cmd-S" #(save-file)}}
            :on-change (fn [editor data value]
                         (if-not (= value @selected-file-content)
                           (reset! selected-file-edited value)))}]]])))
@@ -355,8 +374,6 @@
         changed (r/cursor app-state [:changed])
         owner (r/cursor app-state [:owner])
         changed-files (r/cursor app-state [:changed-files])
-        selected-file (r/cursor app-state [:selected-file])
-        selected-file-content (r/cursor app-state [:selected-file-content])
         selected-file-edited (r/cursor app-state [:selected-file-edited])]
     (fn []
       [:> paper/default
@@ -381,18 +398,11 @@
          [:> toolbar-group/default
           [:> button/default
             {:background-color (:blue500 colors)
+             :title "Save (Ctrl+S)"
              :disabled (or
                          (not @owner)
                          (not @selected-file-edited))
-             :on-click (fn []
-                         (reset! selected-file-content @selected-file-edited)
-                         (reset! selected-file-edited nil)
-                         (swap! changed-files assoc (@selected-file "name") nil)
-                         (-> (.writeFile ^js @archive (@selected-file "name") @selected-file-content)
-                             (.then #(reset! changed true))
-                             (.catch
-                              (fn [e]
-                                (js/console.log "app-toolbar .writeFile error: " e)))))}
+             :on-click save-file}
             "Save"]
           [:> button/default
             {:background-color (:blue500 colors)
