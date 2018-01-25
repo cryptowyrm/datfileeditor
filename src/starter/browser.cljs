@@ -76,7 +76,10 @@
   [^js archive f]
   (-> (.diff archive)
       (.then (fn [result]
-               (f (not (empty? (js->clj result))))))))
+               (f (not (empty? (js->clj result))))))
+      (.catch
+       (fn [e]
+         (js/console.log "archive-changed error: " e)))))
 
 (defn readdir
   "Takes a dat archive and a path to a directory and calls f with
@@ -84,13 +87,15 @@
   [^js archive path f]
   (-> (.readdir archive path #js{:stat true
                                  :recursive true})
-    (.then #(f (js->clj %)))))
+    (.then #(f (js->clj %)))
+    (.catch
+     (fn [e]
+       (js/console.log "readdir error: " e)))))
 
 (defn select-archive [f & {:keys [recursive?]}]
   (-> (js/DatArchive.selectArchive)
     (.then
      (fn [^js archive]
-       (js/console.log archive)
        (swap! app-state assoc :archive archive
                               :selected-file nil
                               :selected-file-content nil
@@ -99,19 +104,15 @@
        (archive-changed archive
         (fn [changed]
           (swap! app-state assoc :changed changed)))
-       (.getInfo archive))
-     (fn [e]
-       (js/console.log "select-archive error: " e)))
+       (.getInfo archive)))
     (.then
      (fn [info]
        (swap! app-state assoc :owner (aget info "isOwner"))
-       (js/console.log (:owner @app-state))
        (.readdir ^js (:archive @app-state) "/" #js{:stat true
-                                                   :recursive (boolean recursive?)}))
-     (fn [e]
-       (js/console.log "select-archive error: " e)))
+                                                   :recursive (boolean recursive?)})))
     (.then
-     #(f (js->clj %))
+     #(f (js->clj %)))
+    (.catch
      (fn [e]
        (js/console.log "select-archive error: " e)))))
 
@@ -164,10 +165,8 @@
 
 (defn browse-daturl [daturl]
   (let [archive (js/DatArchive. daturl)]
-    (js/console.log "archive loaded" archive)
     (readdir archive "/"
       (fn [files]
-        (js/console.log (clj->js files))
         (swap! app-state assoc :archive archive
                                :files files)))))
 
@@ -266,7 +265,6 @@
               (when-let [index (clojure.string/last-index-of (file "name") ".")]
                 (let [file-ending (.toLowerCase (subs (file "name") (+ index 1)))
                       mode (get filetypes-codemirror file-ending)]
-                  (js/console.log (str (file "name") " - " index " - " file-ending " - " mode))
                   (when mode
                     (swap! app-state assoc :mode mode))))
               ; read file from Dat archive unless there are unsaved changes
@@ -274,7 +272,10 @@
                 (swap! app-state assoc :selected-file-content old-edit
                                        :selected-file-edited old-edit)
                 (-> (.readFile ^js (:archive @app-state) (file "name"))
-                    (.then #(swap! app-state assoc :selected-file-content %))))))}])))
+                    (.then #(swap! app-state assoc :selected-file-content %))
+                    (.catch
+                     (fn [e]
+                       (js/console.log "list-item-file .readFile error: " e)))))))}])))
 
 (defn files-list []
   "A List React component that can show a list of file ListItems"
@@ -388,7 +389,10 @@
                          (reset! selected-file-edited nil)
                          (swap! changed-files assoc (@selected-file "name") nil)
                          (-> (.writeFile ^js @archive (@selected-file "name") @selected-file-content)
-                             (.then #(reset! changed true))))}
+                             (.then #(reset! changed true))
+                             (.catch
+                              (fn [e]
+                                (js/console.log "app-toolbar .writeFile error: " e)))))}
             "Save"]
           [:> button/default
             {:background-color (:blue500 colors)
