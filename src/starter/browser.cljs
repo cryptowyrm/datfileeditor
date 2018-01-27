@@ -23,6 +23,8 @@
     ["material-ui/svg-icons/file/folder" :as icon-folder]
     ["material-ui/svg-icons/file/folder-open" :as icon-folder-open]
     ["material-ui/svg-icons/editor/insert-drive-file" :as icon-file]
+    ["material-ui/svg-icons/editor/publish" :as icon-publish]
+    ["material-ui/svg-icons/content/save" :as icon-save]
 
     ;; Material UI components
     ["material-ui/List/List" :as list]
@@ -32,6 +34,7 @@
     ["material-ui/Slider" :as slider]
     ["material-ui/Paper" :as paper]
     ["material-ui/RaisedButton" :as button]
+    ["material-ui/IconButton" :as icon-button]
     ["material-ui/Toggle" :as toggle]
     ["material-ui/Toolbar/Toolbar" :as toolbar]
     ["material-ui/Toolbar/ToolbarGroup" :as toolbar-group]
@@ -212,7 +215,7 @@
                   :secondaryTextColor (:grey700 colors)
                   :canvasColor "#303030"
                   :borderColor (:grey300 colors)
-                  :disabledColor (:grey300 colors)
+                  :disabledColor (:grey700 colors)
                   :pickerHeaderColor (:grey100 colors)
                   :clockCircleColor (:grey100 colors)
                   :alternateTextColor "#ffffff"}}))))
@@ -396,23 +399,22 @@
           (if-not @owner
             [:> toolbar-title/default {:text "read-only"}])]
          [:> toolbar-group/default
-          [:> button/default
-            {:background-color (:blue500 colors)
-             :title "Save (Ctrl+S)"
+          [:> icon-button/default
+            {:title "Save (Ctrl+S)"
              :disabled (or
                          (not @owner)
                          (not @selected-file-edited))
              :on-click save-file}
-            "Save"]
-          [:> button/default
-            {:background-color (:blue500 colors)
+            [:> icon-save/default {:color (:blue500 colors)}]]
+          [:> icon-button/default
+            {:title "Publish"
              :on-click (fn []
                          (reset! changed false)
                          (.commit ^js @archive))
              :disabled (or
                         (not @owner)
                         (not @changed))}
-            "Publish"]
+            [:> icon-publish/default {:color (:blue500 colors)}]]
           [:div
            [:> toggle/default
              {:label "Wrap lines"
