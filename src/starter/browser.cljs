@@ -516,7 +516,7 @@
             [:> toolbar-title/default {:text "read-only"}])]
          [:> toolbar-group/default
           [:> icon-button/default
-            {:title "New file"
+            {:title "New file or directory"
              :disabled (not @owner)
              :on-click (fn []
                          (reset! selected-directory "/")
