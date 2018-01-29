@@ -25,17 +25,22 @@
     ["material-ui/svg-icons/editor/insert-drive-file" :as icon-file]
     ["material-ui/svg-icons/editor/publish" :as icon-publish]
     ["material-ui/svg-icons/content/save" :as icon-save]
+    ["material-ui/svg-icons/action/note-add" :as icon-file-new]
 
     ;; Material UI components
     ["material-ui/List/List" :as list]
     ["material-ui/List/ListItem" :as list-item]
     ["material-ui/AppBar" :as appbar]
     ["material-ui/Drawer" :as drawer]
+    ["material-ui/Dialog" :as dialog]
     ["material-ui/Slider" :as slider]
     ["material-ui/Paper" :as paper]
     ["material-ui/RaisedButton" :as button]
+    ["material-ui/RadioButton/RadioButton" :as radio-button]
+    ["material-ui/RadioButton/RadioButtonGroup" :as radio-button-group]
     ["material-ui/IconButton" :as icon-button]
     ["material-ui/Toggle" :as toggle]
+    ["material-ui/TextField" :as text-field]
     ["material-ui/Toolbar/Toolbar" :as toolbar]
     ["material-ui/Toolbar/ToolbarGroup" :as toolbar-group]
     ["material-ui/Toolbar/ToolbarSeparator" :as toolbar-separator]
@@ -55,6 +60,7 @@
                             :wrap-lines false
                             :changed-files {}
                             :drawer-open false
+                            :new-file-dialog-opened false
                             :settings (default-settings)}))
 
 ;; Filetypes
@@ -140,28 +146,32 @@
   (let [settings (r/cursor app-state [:settings])]
     (.setItem js/localStorage "settings" (js/JSON.stringify (clj->js @settings)))))
 
-(defn file-tree [files-list]
+(defn file-tree [files-list & {:keys [only-directories?]}]
   "Takes a flat list of files as returned by the DatArchive API by using
   the readdir API method and returns a sequence representing a tree, where
   files that point to a directory have a key 'contents' that contains a
   sequence of files in that directory."
   (let [directories (filter #(.isDirectory (% "stat")) files-list)
-        files (filter #(not (.isDirectory (% "stat"))) files-list)]
-    (concat
-      (map
-        (fn [directory]
-          (assoc directory
-                 "contents"
-                 (filter
-                  (fn [file]
-                    (let [dir-name (str (directory "name") "/")
-                          index (count dir-name)]
-                      (and
-                        (.startsWith (file "name") dir-name)
-                        (nil? (clojure.string/index-of (file "name") "/" index)))))
-                  files)))
-        (sort-by #(% "name") directories))
-      (sort-by #(% "name") (filter #(not (clojure.string/includes? (% "name") "/")) files)))))
+        files (filter #(not (.isDirectory (% "stat"))) files-list)
+        directories-p
+          (map
+            (fn [directory]
+              (assoc directory
+                     "contents"
+                     (filter
+                      (fn [file]
+                        (let [dir-name (str (directory "name") "/")
+                              index (count dir-name)]
+                          (and
+                            (.startsWith (file "name") dir-name)
+                            (nil? (clojure.string/index-of (file "name") "/" index)))))
+                      files)))
+            (sort-by #(% "name") directories))
+        files-p
+          (sort-by #(% "name") (filter #(not (clojure.string/includes? (% "name") "/")) files))]
+    (if only-directories?
+      directories-p
+      (concat directories-p files-p))))
 
 (def colors
   (js->clj jscolors :keywordize-keys true))
@@ -360,8 +370,7 @@
 (defn dat-input []
   "A React component that displays a text field and a button that lets you
   enter the URL to and open a Dat Archive."
-  (let [text (atom "")
-        daturl (r/atom app-state [:daturl])]
+  (let [text (atom "")]
     [:div
       [:input {:type "text"
                :placeholder "dat://..."
@@ -370,6 +379,75 @@
       [:button {:on-click #(browse-daturl @text)}
         "Browse daturl"]]))
 
+(defn new-file-list-item [file selected-directory]
+  (if (= (file "name") @selected-directory)
+    (r/as-element
+      [:> list-item/default
+       {:left-icon (r/as-element [:> icon-folder-open/default])
+        :primary-text (file "name")
+        :inner-div-style {:background (:grey800 colors)}
+        :style {:color (:blue400 colors)}
+        :on-click #(reset! selected-directory (file "name"))}])
+    (r/as-element
+      [:> list-item/default
+       {:left-icon (r/as-element [:> icon-folder/default])
+        :primary-text (file "name")
+        :on-click #(reset! selected-directory (file "name"))}])))
+
+(defn new-file-dialog []
+  (let [new-file-dialog-opened (r/cursor app-state [:new-file-dialog-opened])
+        files (r/cursor app-state [:files])
+        selected-directory (r/cursor app-state [:selected-directory])]
+    (fn []
+      [:> dialog/default
+       {:title "Create a new file or directory"
+        :open @new-file-dialog-opened
+        :auto-scroll-body-content true
+        :actions [(r/as-element
+                   [:> button/default
+                    {:background-color (:grey400 colors)
+                     :on-click #(swap! new-file-dialog-opened not)}
+                    "Cancel"])
+                  (r/as-element
+                    [:> button/default
+                     {:primary true
+                      :style {:margin-left 15}
+                      :on-click #(swap! new-file-dialog-opened not)}
+                     "Create"])]}
+       [:p "Select a directory from the list where you want to create the file
+       or directory"]
+       [:> paper/default {:z-depth 2 :style {:margin-bottom 20}}
+        [:> list/default]
+        [:> list-item/default
+         {:left-icon
+          (if (= "/" @selected-directory)
+            (r/as-element [:> icon-folder-open/default])
+            (r/as-element [:> icon-folder/default]))
+          :primary-text "/"
+          :inner-div-style (when (= "/" @selected-directory)
+                             {:background (:grey800 colors)})
+          :style (when (= "/" @selected-directory)
+                   {:color (:blue400 colors)})
+          :on-click #(reset! selected-directory "/")}]
+        (for [file (file-tree @files :only-directories? true)]
+          ^{:key (file "name")}
+          [new-file-list-item file selected-directory])]
+       [:> paper/default {:z-depth 2 :style {:margin-bottom 20
+                                             :padding 10}}
+        [:> radio-button-group/default {:name "node-type"
+                                        :default-selected "file"
+                                        :style {:display "flex"}}
+         [:> radio-button/default {:label "File"
+                                   :value "file"
+                                   :style {:display "block" :width "auto" :margin-right 20}}]
+         [:> radio-button/default {:label "Directory"
+                                   :value "directory"
+                                   :style {:display "block" :width "auto"}}]]]
+       [:> paper/default {:z-depth 2 :style {:padding 10
+                                             :padding-top 0}}
+         [:> text-field/default
+          {:floating-label-text "Name of the new file or directory"}]]])))
+
 (defn app-toolbar []
   "A React component that displays the toolbar of the app"
   (let [wrap-lines (r/cursor app-state [:wrap-lines])
@@ -377,7 +455,9 @@
         changed (r/cursor app-state [:changed])
         owner (r/cursor app-state [:owner])
         changed-files (r/cursor app-state [:changed-files])
-        selected-file-edited (r/cursor app-state [:selected-file-edited])]
+        selected-directory (r/cursor app-state [:selected-directory])
+        selected-file-edited (r/cursor app-state [:selected-file-edited])
+        new-file-dialog-opened (r/cursor app-state [:new-file-dialog-opened])]
     (fn []
       [:> paper/default
         {:z-depth 1
@@ -400,6 +480,15 @@
             [:> toolbar-title/default {:text "read-only"}])]
          [:> toolbar-group/default
           [:> icon-button/default
+            {:title "New file"
+             :disabled (not @owner)
+             :on-click (fn []
+                         (reset! selected-directory "/")
+                         (swap! new-file-dialog-opened not))}
+            [:> icon-file-new/default {:color (:blue500 colors)}]]
+          [:> toolbar-separator/default {:style {:margin-left 12
+                                                 :margin-right 12}}]
+          [:> icon-button/default
             {:title "Save (Ctrl+S)"
              :disabled (or
                          (not @owner)
@@ -415,6 +504,8 @@
                         (not @owner)
                         (not @changed))}
             [:> icon-publish/default {:color (:blue500 colors)}]]
+          [:> toolbar-separator/default {:style {:margin-left 12
+                                                 :margin-right 24}}]
           [:div
            [:> toggle/default
              {:label "Wrap lines"
@@ -478,6 +569,7 @@
                                                  dark-theme
                                                  light-theme)}
           [:div
+           [new-file-dialog]
            [app-drawer]
            [:div {:id "app-container"
                   :style {:display "flex"
