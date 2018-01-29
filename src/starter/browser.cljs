@@ -415,7 +415,8 @@
         files (r/cursor app-state [:files])
         selected-directory (r/cursor app-state [:selected-directory])
         new-file-name (r/cursor app-state [:new-file-name])
-        archive (r/cursor app-state [:archive])]
+        archive (r/cursor app-state [:archive])
+        new-file-error (r/cursor app-state [:new-file-error])]
     (fn []
       [:> dialog/default
        {:title "Create a new file or directory"
@@ -430,24 +431,32 @@
                     [:> button/default
                      {:primary true
                       :style {:margin-left 15}
-                      :on-click (fn []
-                                  (let [path (new-file-path @selected-directory @new-file-name)]
-                                    (js/console.log path)
-                                    (-> (.writeFile
-                                          ^js @archive
-                                          path
-                                          "")
-                                        (.then (fn []
-                                                 (js/console.log "File written")
-                                                 (swap! new-file-dialog-opened not)
-                                                 (.readdir ^js (:archive @app-state) "/" #js{:stat true
-                                                                                             :recursive true})))
-                                        (.then (fn [files]
-                                                 (js/console.log "New files list read")
-                                                 (swap! app-state assoc :files (js->clj files))
-                                                 (js/console.log "File obj: " (find-file path))
-                                                 (select-file (find-file path))))
-                                        (.catch (fn [e] (js/console.log "Create file error: " e))))))}
+                      :on-click
+                      (fn []
+                        (let [path (new-file-path @selected-directory @new-file-name)]
+                          (js/console.log path)
+                          (-> (.writeFile
+                                ^js @archive
+                                path
+                                "")
+                              (.then
+                               (fn []
+                                 (js/console.log "File written")
+                                 (swap! new-file-dialog-opened not)
+                                 (.readdir ^js (:archive @app-state) "/" #js{:stat true
+                                                                             :recursive true})))
+                              (.then
+                               (fn [files]
+                                 (js/console.log "New files list read")
+                                 (swap! app-state assoc :files (js->clj files))
+                                 (js/console.log "File obj: " (find-file path))
+                                 (select-file (find-file path))))
+                              (.catch
+                               (fn [e]
+                                 (js/console.log "Create file error: " e)
+                                 (reset!
+                                   new-file-error
+                                   "Something went wrong, please check the input"))))))}
                      "Create"])]}
        [:p "Select a directory from the list where you want to create the file
        or directory"]
@@ -482,6 +491,7 @@
                                              :padding-top 0}}
          [:> text-field/default
           {:floating-label-text "Name of the new file or directory"
+           :error-text @new-file-error
            :on-change (fn [e value] (reset! new-file-name value))}]]])))
 
 (defn app-toolbar []
@@ -493,7 +503,8 @@
         changed-files (r/cursor app-state [:changed-files])
         selected-directory (r/cursor app-state [:selected-directory])
         selected-file-edited (r/cursor app-state [:selected-file-edited])
-        new-file-dialog-opened (r/cursor app-state [:new-file-dialog-opened])]
+        new-file-dialog-opened (r/cursor app-state [:new-file-dialog-opened])
+        new-file-error (r/cursor app-state [:new-file-error])]
     (fn []
       [:> paper/default
         {:z-depth 1
@@ -520,6 +531,7 @@
              :disabled (not @owner)
              :on-click (fn []
                          (reset! selected-directory "/")
+                         (reset! new-file-error nil)
                          (swap! new-file-dialog-opened not))}
             [:> icon-file-new/default {:color (:blue500 colors)}]]
           [:> toolbar-separator/default {:style {:margin-left 12
