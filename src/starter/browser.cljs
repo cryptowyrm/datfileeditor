@@ -146,6 +146,11 @@
   (let [settings (r/cursor app-state [:settings])]
     (.setItem js/localStorage "settings" (js/JSON.stringify (clj->js @settings)))))
 
+(defn new-file-path
+  "Takes a path and a filename and returns a new path with the file added"
+  [directory filename]
+  (str (when-not (= "/" directory) directory) (when-not (= "/" directory) "/") filename))
+
 (defn file-tree [files-list & {:keys [only-directories?]}]
   "Takes a flat list of files as returned by the DatArchive API by using
   the readdir API method and returns a sequence representing a tree, where
@@ -205,6 +210,39 @@
            (fn [e]
              (js/console.log "save-file .writeFile error: " e)))))))
 
+(defn find-file [path]
+  "Returns the file object for the given path or nil if not found"
+  (let [files (r/cursor app-state [:files])]
+    (first (filter #(= path (get % "name")) @files))))
+
+(defn select-file [file]
+  (let [selected-file (r/cursor app-state [:selected-file])
+        selected-file-edited (r/cursor app-state [:selected-file-edited])
+        changed-files (r/cursor app-state [:changed-files])]
+    ; preserve unsaved changes before switching files
+    (if @selected-file-edited
+      (swap! changed-files assoc (get @selected-file "name")
+                                 @selected-file-edited))
+    ; reset current file editing data
+    (swap! app-state assoc :selected-file file
+                           :selected-file-edited nil
+                           :mode nil)
+    ; set syntax highlighting if available
+    (when-let [index (clojure.string/last-index-of (file "name") ".")]
+      (let [file-ending (.toLowerCase (subs (file "name") (+ index 1)))
+            mode (get filetypes-codemirror file-ending)]
+        (when mode
+          (swap! app-state assoc :mode mode))))
+    ; read file from Dat archive unless there are unsaved changes
+    (if-let [old-edit (@changed-files (file "name"))]
+      (swap! app-state assoc :selected-file-content old-edit
+                             :selected-file-edited old-edit)
+      (-> (.readFile ^js (:archive @app-state) (file "name"))
+          (.then #(swap! app-state assoc :selected-file-content %))
+          (.catch
+           (fn [e]
+             (js/console.log "list-item-file .readFile error: " e)))))))
+
 ;; Material UI Themes
 
 (def light-theme
@@ -244,7 +282,7 @@
 ;; React Components
 
 (defn list-item-file [file]
-  "A ListItem React component representing a file or directoy."
+  "A ListItem React component representing a file or directory."
   (let [expanded (r/atom false)
         owner (r/cursor app-state [:owner])
         selected-file (r/cursor app-state [:selected-file])
@@ -283,29 +321,7 @@
          :on-click
           (fn [e]
             (when-not (.isDirectory (file "stat"))
-              ; preserve unsaved changes before switching files
-              (if @selected-file-edited
-                (swap! changed-files assoc (get @selected-file "name")
-                                           @selected-file-edited))
-              ; reset current file editing data
-              (swap! app-state assoc :selected-file file
-                                     :selected-file-edited nil
-                                     :mode nil)
-              ; set syntax highlighting if available
-              (when-let [index (clojure.string/last-index-of (file "name") ".")]
-                (let [file-ending (.toLowerCase (subs (file "name") (+ index 1)))
-                      mode (get filetypes-codemirror file-ending)]
-                  (when mode
-                    (swap! app-state assoc :mode mode))))
-              ; read file from Dat archive unless there are unsaved changes
-              (if-let [old-edit (@changed-files (file "name"))]
-                (swap! app-state assoc :selected-file-content old-edit
-                                       :selected-file-edited old-edit)
-                (-> (.readFile ^js (:archive @app-state) (file "name"))
-                    (.then #(swap! app-state assoc :selected-file-content %))
-                    (.catch
-                     (fn [e]
-                       (js/console.log "list-item-file .readFile error: " e)))))))}])))
+              (select-file file)))}])))
 
 (defn files-list []
   "A List React component that can show a list of file ListItems"
@@ -397,7 +413,9 @@
 (defn new-file-dialog []
   (let [new-file-dialog-opened (r/cursor app-state [:new-file-dialog-opened])
         files (r/cursor app-state [:files])
-        selected-directory (r/cursor app-state [:selected-directory])]
+        selected-directory (r/cursor app-state [:selected-directory])
+        new-file-name (r/cursor app-state [:new-file-name])
+        archive (r/cursor app-state [:archive])]
     (fn []
       [:> dialog/default
        {:title "Create a new file or directory"
@@ -412,7 +430,24 @@
                     [:> button/default
                      {:primary true
                       :style {:margin-left 15}
-                      :on-click #(swap! new-file-dialog-opened not)}
+                      :on-click (fn []
+                                  (let [path (new-file-path @selected-directory @new-file-name)]
+                                    (js/console.log path)
+                                    (-> (.writeFile
+                                          ^js @archive
+                                          path
+                                          "")
+                                        (.then (fn []
+                                                 (js/console.log "File written")
+                                                 (swap! new-file-dialog-opened not)
+                                                 (.readdir ^js (:archive @app-state) "/" #js{:stat true
+                                                                                             :recursive true})))
+                                        (.then (fn [files]
+                                                 (js/console.log "New files list read")
+                                                 (swap! app-state assoc :files (js->clj files))
+                                                 (js/console.log "File obj: " (find-file path))
+                                                 (select-file (find-file path))))
+                                        (.catch (fn [e] (js/console.log "Create file error: " e))))))}
                      "Create"])]}
        [:p "Select a directory from the list where you want to create the file
        or directory"]
@@ -446,7 +481,8 @@
        [:> paper/default {:z-depth 2 :style {:padding 10
                                              :padding-top 0}}
          [:> text-field/default
-          {:floating-label-text "Name of the new file or directory"}]]])))
+          {:floating-label-text "Name of the new file or directory"
+           :on-change (fn [e value] (reset! new-file-name value))}]]])))
 
 (defn app-toolbar []
   "A React component that displays the toolbar of the app"
